@@ -1,0 +1,23 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Applies to RELEASE builds only (flutter build apk --release). The
+      debug/profile manifests are untouched, so `flutter run` and hot reload
+      keep the INTERNET permission the Flutter dev tools need.
+
+      Some libraries this app depends on (the on-device OCR library is built
+      on Google Play Services infrastructure) can merge an INTERNET
+      permission into the final app from their own manifests, even though
+      this app never uses the network. tools:node="remove" strips it out no
+      matter which library declared it, so the installed app is not allowed
+      to open any network connection at all. Android enforces this at the
+      operating-system level.
+
+      Only INTERNET is removed. The read-only ACCESS_NETWORK_STATE
+      permission is deliberately left alone: it cannot send or receive
+      anything, and some libraries check it internally.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+
+</manifest>

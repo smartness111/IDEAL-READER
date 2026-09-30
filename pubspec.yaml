@@ -1,0 +1,32 @@
+name: ideal_reader
+description: "An app that reads your books aloud, on Windows and Android."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_tts: ^4.2.5
+  file_picker: ^8.1.4
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
+  epubx: ^4.0.0
+  path: ^1.9.0
+  archive: ^3.6.1
+  xml: ^6.5.0
+  syncfusion_flutter_pdf: ^33.1.46
+  google_mlkit_text_recognition: ^0.15.1
+  audio_service: ^0.18.18
+  permission_handler: ^12.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
