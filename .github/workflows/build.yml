@@ -58,7 +58,8 @@ jobs:
           Push-Location _scaffold
           flutter create --platforms=windows,android --org com.idealpathimpactful --project-name ideal_reader .
           Pop-Location
-
+          
+          Remove-Item _scaffold\lib -Recurse -Force
           Copy-Item lib -Destination _scaffold\lib -Recurse -Force
           Copy-Item pubspec.yaml -Destination _scaffold\pubspec.yaml -Force
           Copy-Item android\app\src\main\AndroidManifest.xml -Destination _scaffold\android\app\src\main\AndroidManifest.xml -Force
