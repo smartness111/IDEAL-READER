@@ -1,0 +1,124 @@
+# Builds Ideal Reader in the cloud so you don't need to install Flutter,
+# Visual Studio, or Android Studio on your own PC. GitHub runs this for
+# free on their own Windows machine every time you use it.
+#
+# What it produces (downloadable from the finished run's "Artifacts"
+# section, as a zip you then unzip):
+#   - IdealReaderSetup.exe  — a normal double-click Windows installer
+#   - app-release.apk       — install this on an Android phone
+#
+# How to use this (all in your browser, no command line needed):
+#   1. Create a free account at https://github.com if you don't have one.
+#   2. Create a new repository (the "+" in the top right > New repository).
+#      It can be Private.
+#   3. Open the repository, click "Add file" > "Upload files", and drag in
+#      EVERYTHING from this unzipped folder (README.md, lib, pubspec.yaml,
+#      android, installer, .github — all of it), then click "Commit".
+#   4. Click the "Actions" tab. If asked, click "I understand my workflows,
+#      go ahead and enable them". A build named "Build Ideal Reader" should
+#      already be running (uploading the files triggers it automatically).
+#   5. Wait about 10–15 minutes for the green checkmark.
+#   6. Click into that run, scroll down to "Artifacts", and download
+#      "ideal-reader-windows-installer" and "ideal-reader-android-apk".
+#
+# This is my best-effort setup, built from well-established free tools
+# (the official Flutter GitHub Action, and Chocolatey/Inno Setup which
+# already come on GitHub's Windows runners) — but I have not been able to
+# run it myself to confirm it end to end. If a run shows a red X, click it,
+# open the failed step, and send me the error text so I can fix it.
+
+name: Build Ideal Reader
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: {}
+
+jobs:
+  build-windows-and-android:
+    runs-on: windows-latest
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Scaffold the native Windows/Android project
+        shell: pwsh
+        run: |
+          # This repo only holds this app's own code (lib/, pubspec.yaml,
+          # the two AndroidManifest.xml files, the installer script). The
+          # surrounding native project is generated fresh here, then the
+          # app's own files are copied on top of it.
+          New-Item -ItemType Directory -Path _scaffold | Out-Null
+          Push-Location _scaffold
+          flutter create --platforms=windows,android --org com.idealpathimpactful --project-name ideal_reader .
+          Pop-Location
+
+          Copy-Item lib -Destination _scaffold\lib -Recurse -Force
+          Copy-Item pubspec.yaml -Destination _scaffold\pubspec.yaml -Force
+          Copy-Item android\app\src\main\AndroidManifest.xml -Destination _scaffold\android\app\src\main\AndroidManifest.xml -Force
+          New-Item -ItemType Directory -Path _scaffold\android\app\src\release -Force | Out-Null
+          Copy-Item android\app\src\release\AndroidManifest.xml -Destination _scaffold\android\app\src\release\AndroidManifest.xml -Force
+
+      - name: Set the app's display name in the Windows build
+        shell: pwsh
+        working-directory: _scaffold
+        run: |
+          $mainCpp = 'windows\runner\main.cpp'
+          (Get-Content $mainCpp -Raw) -replace 'Create(L"[^"]*"', 'Create(L"Ideal Reader"' |
+            Set-Content $mainCpp -NoNewline
+
+          $rc = 'windows\runner\Runner.rc'
+          $content = Get-Content $rc -Raw
+          $content = $content -replace 'VALUE "CompanyName", "[^"]*"', 'VALUE "CompanyName", "Ideal Path Impactful Development Initiative"'
+          $content = $content -replace 'VALUE "FileDescription", "[^"]*"', 'VALUE "FileDescription", "Ideal Reader"'
+          $content = $content -replace 'VALUE "ProductName", "[^"]*"', 'VALUE "ProductName", "Ideal Reader"'
+          $content = $content -replace 'VALUE "InternalName", "[^"]*"', 'VALUE "InternalName", "Ideal Reader"'
+          Set-Content $rc -Value $content -NoNewline
+
+      - name: flutter pub get
+        working-directory: _scaffold
+        run: flutter pub get
+
+      - name: Build the Windows app
+        working-directory: _scaffold
+        run: flutter build windows --release
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Package the Windows installer
+        shell: pwsh
+        run: |
+          Copy-Item installer\ideal_reader.iss -Destination _scaffold\installer.iss -Force
+          $iss = Get-Content _scaffold\installer.iss -Raw
+          # The script normally expects to sit in an "installer" subfolder
+          # next to "build"; here it sits at the project root instead.
+          $iss = $iss -replace '#define SourceDir "\.\.\\build', '#define SourceDir "build'
+          $iss = $iss -replace 'SetupIconFile=\.\.\\windows', 'SetupIconFile=windows'
+          Set-Content _scaffold\installer.iss -Value $iss -NoNewline
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" _scaffold\installer.iss
+
+      - name: Upload the Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ideal-reader-windows-installer
+          path: _scaffold\Output\IdealReaderSetup.exe
+
+      - name: Build the Android app
+        continue-on-error: true
+        working-directory: _scaffold
+        run: flutter build apk --release
+
+      - name: Upload the Android app
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ideal-reader-android-apk
+          path: _scaffold\build\app\outputs\flutter-apk\app-release.apk
