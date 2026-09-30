@@ -70,7 +70,7 @@ jobs:
         working-directory: _scaffold
         run: |
           $mainCpp = 'windows\runner\main.cpp'
-          (Get-Content $mainCpp -Raw) -replace 'Create(L"[^"]*"', 'Create(L"Ideal Reader"' |
+             (Get-Content $mainCpp -Raw) -replace 'Create\(L"[^"]*"', 'Create(L"Ideal Reader"' |
             Set-Content $mainCpp -NoNewline
 
           $rc = 'windows\runner\Runner.rc'
